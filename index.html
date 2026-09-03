@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agile Board</title>
+  <meta name="description" content="Live Octopus Agile import & export prices, and whether now is a good time to run the oven, dryer or other high-power appliances.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="wordmark"><span class="bolt">⚡</span>Agile Board<small>Octopus Agile in &amp; out</small></div>
+      <div class="controls">
+        <form id="postcode-form" title="Find your region from a postcode">
+          <input id="postcode-input" type="text" placeholder="Postcode…" autocomplete="postal-code" aria-label="Postcode for region lookup">
+          <button type="submit">Find</button>
+        </form>
+        <select id="region-select" aria-label="Electricity region"></select>
+        <button id="refresh-btn" type="button" title="Refresh prices">↻</button>
+        <button id="theme-toggle" type="button" title="Theme">◐ auto</button>
+      </div>
+    </header>
+
+    <div id="status-banner" class="banner" hidden></div>
+
+    <div id="empty-state" class="empty" hidden>
+      <h2>No prices yet</h2>
+      <p id="empty-detail"></p>
+    </div>
+
+    <main id="dashboard">
+      <section class="hero" aria-label="Should I run it now?">
+        <div class="hero-top">
+          <div class="verdict" id="verdict-chip" hidden>
+            <span class="verdict-icon" id="verdict-icon" aria-hidden="true"></span>
+            <span class="verdict-label" id="verdict-label"></span>
+          </div>
+          <div class="now-figure">
+            <span class="value" id="now-price">—</span>
+            <span class="unit"><b>per kWh right now</b><span id="now-band"></span></span>
+          </div>
+        </div>
+        <p class="recommendation" id="recommendation">Loading prices…</p>
+        <p class="caveat" id="caveat" hidden></p>
+
+        <div class="appliance-row" id="appliance-row" role="group" aria-label="Appliance"></div>
+        <div class="custom-fields" id="custom-fields">
+          <label>Duration <input id="duration-input" type="number" min="0.5" max="12" step="0.5"> h</label>
+          <label>Energy <input id="energy-input" type="number" min="0.1" max="100" step="0.1"> kWh</label>
+        </div>
+
+        <div class="ribbon-block">
+          <div class="ribbon" id="ribbon" aria-hidden="true"></div>
+          <div class="ribbon-labels" id="ribbon-labels"></div>
+        </div>
+      </section>
+
+      <section class="tiles">
+        <div class="tile"><div class="label">Import now — you pay</div><div class="value" id="tile-import-value">—</div><div class="sub" id="tile-import-sub"></div></div>
+        <div class="tile"><div class="label">Export now — you earn</div><div class="value" id="tile-export-value">—</div><div class="sub" id="tile-export-sub"></div></div>
+        <div class="tile"><div class="label">Cheapest window</div><div class="value" id="tile-best-value">—</div><div class="sub" id="tile-best-sub"></div></div>
+        <div class="tile"><div class="label">Prices known until</div><div class="value" id="tile-horizon-value">—</div><div class="sub" id="tile-horizon-sub"></div></div>
+      </section>
+
+      <section class="card">
+        <h2>Import — what you pay</h2>
+        <p class="card-sub">Half-hourly Agile unit rate, p/kWh inc VAT. Scroll or pinch to zoom, drag to pan.</p>
+        <div id="import-chart" class="chart" role="img" aria-label="Import price chart. The same values are in the table view below."></div>
+        <div class="legend" id="band-legend" aria-hidden="true"></div>
+      </section>
+
+      <section class="card">
+        <h2>Export — what you're paid</h2>
+        <p class="card-sub">Agile Outgoing rate, p/kWh (no VAT on export). Zoom is synced with the import chart.</p>
+        <div id="export-chart" class="chart" role="img" aria-label="Export price chart. The same values are in the table view below."></div>
+      </section>
+
+      <details class="table-view">
+        <summary>Table view — every half-hour slot</summary>
+        <div class="table-scroll">
+          <table class="slots">
+            <thead><tr><th>Slot (UK time)</th><th>Import p/kWh</th><th>Export p/kWh</th><th>Band</th></tr></thead>
+            <tbody id="slot-table-body"></tbody>
+          </table>
+        </div>
+      </details>
+    </main>
+
+    <footer>
+      <div id="meta-line" class="mono"></div>
+      <div>Prices from the public <a href="https://developer.octopus.energy/" rel="noopener">Octopus Energy API</a>.
+        New day-ahead prices are published around 4pm UK time.
+        This is an unofficial dashboard — check your own tariff in your Octopus account.</div>
+      <div>Phase 2 will fold in solar &amp; battery (FoxESS) so "cheap" means cheap <em>for your house</em>, not just the grid.</div>
+    </footer>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/6.1.0/echarts.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/timeutil.js"></script>
+  <script src="js/advisor.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

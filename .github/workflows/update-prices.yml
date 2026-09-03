@@ -1,0 +1,42 @@
+name: Update Agile prices
+
+on:
+  schedule:
+    # New day-ahead prices publish ~16:00 UK time; GitHub cron is UTC and often
+    # runs late, so: 15:05 UTC (16:05 BST, summer), 16:05 UTC (16:05 GMT, winter
+    # + summer retry), 18:05 UTC safety run. Minute :05 avoids on-the-hour queues.
+    - cron: '5 15,16,18 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-prices
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch latest rates
+        env:
+          REGION: ${{ vars.AGILE_REGION || 'C' }}
+        run: python3 scripts/fetch_prices.py
+
+      - name: Commit snapshot if changed
+        run: |
+          # git add first: `git diff --quiet` alone exits 0 for an UNTRACKED
+          # file, which would silently skip the very first commit.
+          git add data/rates.json
+          if git diff --quiet --cached -- data/rates.json; then
+            echo "No changes — skipping commit"
+            exit 0
+          fi
+          git config user.name "agile-board-bot"
+          git config user.email "actions@users.noreply.github.com"
+          HORIZON=$(python3 -c "import json;print(json.load(open('data/rates.json'))['import']['rates'][-1]['to'])")
+          git commit -m "data: rates through ${HORIZON}"
+          git push

@@ -1,0 +1,137 @@
+# Agile price light — Home Assistant package
+#
+# An ambient indicator driven by the live Agile rate: a colour bulb (or LED
+# strip / pixel clock) that answers "is now a good time?" at a glance, using
+# the SAME price bands as the Agile Board dashboard so they always agree.
+#
+# Band colours (mirroring js/config.js in the dashboard):
+#   <= 0p   plunge      deep blue, gently pulsing (you're being PAID)
+#   <= 10p  very cheap  blue
+#   <= 18p  cheap       light blue
+#   <= 27p  typical     neutral warm white
+#   <= 35p  high        soft red
+#   <= 45p  very high   red
+#   >  45p  extreme     deep red
+#
+# Setup:
+# 1. Needs the BottlecapDave Octopus Energy integration (same as the appliance
+#    package). Replace sensor.octopus_energy_electricity_current_rate below
+#    with your real entity id (Developer Tools > States; the value is £/kWh).
+# 2. Replace light.price_orb with your bulb (any colour bulb HA can see:
+#    Tapo L530E, Hue, IKEA…). A cheap bulb in an opal globe lamp works well.
+# 3. Drop into config/packages/ and restart. The light re-paints every time
+#    the half-hourly rate changes, and switches off overnight.
+
+template:
+  - sensor:
+      - name: "Agile price band"
+        unique_id: agile_price_band
+        state: >-
+          {% set p = states('sensor.octopus_energy_electricity_current_rate') | float(none) %}
+          {% if p is none %} unknown
+          {% elif p <= 0 %} plunge
+          {% elif p <= 0.10 %} very_cheap
+          {% elif p <= 0.18 %} cheap
+          {% elif p <= 0.27 %} typical
+          {% elif p <= 0.35 %} high
+          {% elif p <= 0.45 %} very_high
+          {% else %} extreme
+          {% endif %}
+
+automation:
+  - id: agile_price_light
+    alias: "Agile: paint the price light"
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: sensor.agile_price_band
+      - platform: homeassistant
+        event: start
+      - platform: time
+        at: "07:00:00"
+    condition:
+      # Ambient light only while people are up; tweak to taste.
+      - condition: time
+        after: "07:00:00"
+        before: "23:00:00"
+    action:
+      - choose:
+          - conditions: "{{ is_state('sensor.agile_price_band', 'plunge') }}"
+            sequence:
+              # Deep blue slow pulse: the "free electricity" party trick.
+              - repeat:
+                  while: "{{ is_state('sensor.agile_price_band', 'plunge') }}"
+                  sequence:
+                    - service: light.turn_on
+                      target: { entity_id: light.price_orb }
+                      data: { rgb_color: [13, 54, 107], brightness_pct: 100, transition: 2 }
+                    - delay: "00:00:03"
+                    - service: light.turn_on
+                      target: { entity_id: light.price_orb }
+                      data: { rgb_color: [13, 54, 107], brightness_pct: 35, transition: 2 }
+                    - delay: "00:00:03"
+          - conditions: "{{ is_state('sensor.agile_price_band', 'very_cheap') }}"
+            sequence:
+              - service: light.turn_on
+                target: { entity_id: light.price_orb }
+                data: { rgb_color: [28, 92, 171], brightness_pct: 60, transition: 5 }
+          - conditions: "{{ is_state('sensor.agile_price_band', 'cheap') }}"
+            sequence:
+              - service: light.turn_on
+                target: { entity_id: light.price_orb }
+                data: { rgb_color: [85, 152, 231], brightness_pct: 50, transition: 5 }
+          - conditions: "{{ is_state('sensor.agile_price_band', 'typical') }}"
+            sequence:
+              - service: light.turn_on
+                target: { entity_id: light.price_orb }
+                data: { rgb_color: [255, 214, 170], brightness_pct: 25, transition: 5 }
+          - conditions: "{{ is_state('sensor.agile_price_band', 'high') }}"
+            sequence:
+              - service: light.turn_on
+                target: { entity_id: light.price_orb }
+                data: { rgb_color: [221, 128, 116], brightness_pct: 45, transition: 5 }
+          - conditions: "{{ is_state('sensor.agile_price_band', 'very_high') }}"
+            sequence:
+              - service: light.turn_on
+                target: { entity_id: light.price_orb }
+                data: { rgb_color: [208, 59, 59], brightness_pct: 60, transition: 5 }
+          - conditions: "{{ is_state('sensor.agile_price_band', 'extreme') }}"
+            sequence:
+              - service: light.turn_on
+                target: { entity_id: light.price_orb }
+                data: { rgb_color: [138, 31, 31], brightness_pct: 80, transition: 5 }
+        default:
+          - service: light.turn_off
+            target: { entity_id: light.price_orb }
+
+  - id: agile_price_light_night_off
+    alias: "Agile: price light off overnight"
+    trigger:
+      - platform: time
+        at: "23:00:00"
+    action:
+      - service: light.turn_off
+        target: { entity_id: light.price_orb }
+
+# ---------------------------------------------------------------------------
+# Optional: Awtrix pixel clock (Ulanzi TC001) — shows the actual pence figure
+# in the band colour instead of colour alone. Uncomment and set your MQTT
+# prefix (default awtrix_XXXXXX). Publishes a persistent custom app "agile".
+# ---------------------------------------------------------------------------
+# automation:
+#   - id: agile_awtrix_price
+#     alias: "Agile: price on pixel clock"
+#     trigger:
+#       - platform: state
+#         entity_id: sensor.octopus_energy_electricity_current_rate
+#     action:
+#       - service: mqtt.publish
+#         data:
+#           topic: awtrix_XXXXXX/custom/agile
+#           payload: >-
+#             {% set p = states('sensor.octopus_energy_electricity_current_rate') | float(0) * 100 %}
+#             {% set band = states('sensor.agile_price_band') %}
+#             {% set colors = {'plunge':'#0D366B','very_cheap':'#1C5CAB','cheap':'#5598E7',
+#                              'typical':'#B3B2AA','high':'#DD8074','very_high':'#D03B3B',
+#                              'extreme':'#8A1F1F'} %}
+#             {"text": "{{ p | round(1) }}p", "color": "{{ colors.get(band, '#FFFFFF') }}"}

@@ -83,3 +83,13 @@ Planned, deliberately not built yet:
 
 Prices from the public [Octopus Energy API](https://developer.octopus.energy/).
 Unofficial — always check your own tariff in your Octopus account.
+
+## Home Assistant automation
+
+`homeassistant/agile_appliances.yaml` is a drop-in HA package that pairs with
+this dashboard: it powers appliances up in the cheapest windows (via the
+BottlecapDave Octopus Energy integration's target-rate sensors, configured to
+the same presets as the dashboard) and **never cuts power mid-cycle** — a
+power-monitoring smart plug plus a debounced "idle" sensor gates every
+switch-off, so the schedule opens the window but only a finished cycle closes
+it. Setup instructions are in the file's header.

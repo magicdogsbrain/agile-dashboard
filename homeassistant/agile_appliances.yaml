@@ -1,0 +1,171 @@
+# Agile appliance control — Home Assistant package
+#
+# Companion to the Agile Board dashboard: runs appliances in the cheap windows
+# and NEVER cuts power to one that is mid-cycle. Uses power draw from a
+# monitoring smart plug to tell "running" from "finished".
+#
+# Setup:
+# 1. Install the "Octopus Energy" integration (BottlecapDave) via HACS and add
+#    your account. In the integration's CONFIGURE flow, add target rate sensors
+#    (they are created in the UI, not YAML). Suggested, matching the dashboard
+#    presets:
+#      - name: "dryer"      | type: Continuous   | hours: 2.5 | period: 21:00-08:00
+#      - name: "dishwasher" | type: Continuous   | hours: 3.0 | period: 21:00-08:00
+#      - name: "immersion"  | type: Intermittent | hours: 2.0 | period: 00:00-16:00
+#    That yields entities like binary_sensor.octopus_energy_target_dryer.
+# 2. Rename the entities below to match yours. The integration's real entity
+#    ids embed your meter details (e.g. sensor.octopus_energy_electricity_
+#    XXXXXXXX_YYYYYYYYYYYY_current_rate, in £/kWh) — find them in Developer
+#    Tools > States and replace the shorthand names used here.
+#    Rename the plug entities to match your devices too (any plug/relay with
+#    power monitoring: Shelly Plug S, Tapo P110, etc. Immersion: use a wired
+#    Shelly/contactor, not a 13A plug).
+# 3. Drop this file in config/packages/ (enable packages in configuration.yaml:
+#      homeassistant: { packages: !include_dir_named packages }
+#    ) and restart.
+#
+# How the no-interrupt guard works:
+#   Each appliance gets an "idle" template sensor: power below a small
+#   threshold, SUSTAINED for several minutes (delay_on), so the dips inside a
+#   real cycle (soak pauses, dishwasher dry phase, anti-crease tumble) don't
+#   read as "finished". The switch-off automation fires at the window end but
+#   then WAITS for idle before cutting power — a running cycle always completes.
+#   Tune the threshold/delay per appliance: watch the plug's power sensor
+#   through one full cycle and pick a threshold below its quietest mid-cycle
+#   dip, or lengthen delay_on.
+
+template:
+  - binary_sensor:
+      - name: "Dryer idle"
+        unique_id: agile_dryer_idle
+        state: >-
+          {{ states('sensor.dryer_plug_power') | float(999) < 5 }}
+        delay_on: "00:05:00"
+
+      - name: "Dishwasher idle"
+        unique_id: agile_dishwasher_idle
+        state: >-
+          {{ states('sensor.dishwasher_plug_power') | float(999) < 3 }}
+        delay_on: "00:10:00"   # dry phase draws almost nothing — wait longer
+
+automation:
+  # ---------- Tumble dryer: delayed start in the cheapest 2.5h ----------
+  # Load the dryer, press start (it sits waiting on a dead plug), and the
+  # cheap window powers it up. If you were already running it by hand, the
+  # window opening changes nothing.
+  - id: agile_dryer_window_on
+    alias: "Agile: dryer on for cheapest window"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.octopus_energy_target_dryer
+        to: "on"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.dryer_plug
+
+  - id: agile_dryer_window_off
+    alias: "Agile: dryer off after window — never mid-cycle"
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.octopus_energy_target_dryer
+        to: "off"
+    action:
+      # If a cycle is still running, wait for it to finish (up to 4h) before
+      # cutting power. The guard, not the schedule, has the final say.
+      - wait_for_trigger:
+          - platform: state
+            entity_id: binary_sensor.dryer_idle
+            to: "on"
+        timeout: "04:00:00"
+        continue_on_timeout: false
+      - service: switch.turn_off
+        target:
+          entity_id: switch.dryer_plug
+
+  # ---------- Dishwasher: same pattern ----------
+  - id: agile_dishwasher_window_on
+    alias: "Agile: dishwasher on for cheapest window"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.octopus_energy_target_dishwasher
+        to: "on"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.dishwasher_plug
+
+  - id: agile_dishwasher_window_off
+    alias: "Agile: dishwasher off after window — never mid-cycle"
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.octopus_energy_target_dishwasher
+        to: "off"
+    action:
+      - wait_for_trigger:
+          - platform: state
+            entity_id: binary_sensor.dishwasher_idle
+            to: "on"
+        timeout: "04:00:00"
+        continue_on_timeout: false
+      - service: switch.turn_off
+        target:
+          entity_id: switch.dishwasher_plug
+
+  # ---------- Immersion heater: interruptible — price rules directly ----------
+  # An immersion just pauses when cut, so it may follow prices with no guard:
+  # on in the cheapest intermittent slots, off outside them, and hard-off in
+  # any spike even mid-slot. Plunge pricing (<0p) also forces it on.
+  - id: agile_immersion_follow_prices
+    alias: "Agile: immersion follows cheap slots"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.octopus_energy_target_immersion
+      - platform: state
+        entity_id: sensor.octopus_energy_electricity_current_rate
+    action:
+      - choose:
+          - conditions: >-
+              {{ states('sensor.octopus_energy_electricity_current_rate') | float(99) < 0 }}
+            sequence:
+              - service: switch.turn_on
+                target: { entity_id: switch.immersion_relay }
+          - conditions: >-
+              {{ is_state('binary_sensor.octopus_energy_target_immersion', 'on')
+                 and states('sensor.octopus_energy_electricity_current_rate') | float(99) < 0.35 }}
+            sequence:
+              - service: switch.turn_on
+                target: { entity_id: switch.immersion_relay }
+        default:
+          - service: switch.turn_off
+            target: { entity_id: switch.immersion_relay }
+
+  # ---------- Safety net: plug left on outside any window ----------
+  # If someone switches the dryer plug on by hand during the 4-7pm peak, say
+  # so rather than silently letting it run — but never turn it off for them.
+  - id: agile_peak_price_heads_up
+    alias: "Agile: peak-price heads-up for running appliances"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.octopus_energy_electricity_current_rate
+        above: 0.35
+    condition:
+      - condition: or
+        conditions:
+          - condition: state
+            entity_id: binary_sensor.dryer_idle
+            state: "off"
+          - condition: state
+            entity_id: binary_sensor.dishwasher_idle
+            state: "off"
+    action:
+      - service: notify.notify
+        data:
+          title: "Agile price spike"
+          message: >-
+            Electricity is {{ (states('sensor.octopus_energy_electricity_current_rate') | float(0) * 100) | round(0) }}p/kWh
+            and an appliance is mid-cycle. It won't be interrupted — but maybe
+            don't start anything else for a bit.

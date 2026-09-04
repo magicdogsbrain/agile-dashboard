@@ -30,6 +30,9 @@ Worker proxy (FoxESS has no CORS and a secret signing key — never call it clie
 - Product codes rotate: discovery first, pinned fallback second (js/api.js and
   scripts/fetch_prices.py must stay in sync on this logic).
 - Plain scripts, no modules — the page must keep working from `file://`.
+- account.html: the Octopus API key lives ONLY in browser localStorage. It must
+  never be committed, logged, put in the Action, or sent to any host other than
+  api.octopus.energy (repo is public). Auth header is Basic btoa(key + ':').
 - localStorage is wrapped in try/catch (private browsing) — keep it that way.
 
 ## Style

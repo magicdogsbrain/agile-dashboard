@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agile Board — Account</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="wordmark"><span class="bolt">⚡</span>Agile Board<small>your account</small></div>
+      <div class="controls">
+        <a class="nav-link" href="index.html">← Prices</a>
+        <button id="theme-toggle" type="button" title="Theme">◐ auto</button>
+      </div>
+    </header>
+
+    <section class="card" id="connect-card">
+      <h2>Connect your Octopus account</h2>
+      <p class="card-sub">
+        Everything here stays in <em>this browser</em> (localStorage) and talks straight to
+        api.octopus.energy — the key is never sent anywhere else, never leaves this device,
+        and is never put in the repository. Your API key acts like your account password:
+        get it (or kill a leaked one instantly by regenerating) at
+        <a href="https://octopus.energy/dashboard/developer/" rel="noopener">Octopus → API access</a>.
+      </p>
+      <form id="connect-form" class="connect-form" autocomplete="off">
+        <label>API key
+          <input id="api-key" type="password" placeholder="sk_live_…" autocomplete="off" spellcheck="false">
+        </label>
+        <label>Account number
+          <input id="account-number" type="text" placeholder="A-1AB2C3D4" autocomplete="off" spellcheck="false">
+        </label>
+        <button type="submit" id="connect-btn">Connect</button>
+        <button type="button" id="forget-btn" class="danger" hidden>Forget key</button>
+      </form>
+      <p class="connect-status" id="connect-status" hidden></p>
+    </section>
+
+    <main id="account-main" hidden>
+      <section class="card">
+        <h2>Your account</h2>
+        <dl class="kv" id="account-summary"></dl>
+      </section>
+
+      <section class="tiles">
+        <div class="tile"><div class="label" id="tile-yday-label">Yesterday on Agile</div><div class="value" id="tile-yday-value">—</div><div class="sub" id="tile-yday-sub"></div></div>
+        <div class="tile"><div class="label">Your 30-day Agile rate</div><div class="value" id="tile-rate-value">—</div><div class="sub" id="tile-rate-sub"></div></div>
+        <div class="tile"><div class="label" id="tile-vs-label">30 days: Agile vs your tariff</div><div class="value" id="tile-vs-value">—</div><div class="sub" id="tile-vs-sub"></div></div>
+        <div class="tile"><div class="label">Projected yearly difference</div><div class="value" id="tile-year-value">—</div><div class="sub" id="tile-year-sub"></div></div>
+      </section>
+
+      <section class="card">
+        <h2>Daily cost on Agile — last 30 days</h2>
+        <p class="card-sub">Your actual half-hourly consumption priced at Agile rates for your region<span id="daily-basis"></span>.</p>
+        <div id="daily-chart" class="chart" role="img" aria-label="Daily Agile cost chart. The same values are in the table below."></div>
+      </section>
+
+      <section class="card">
+        <h2>When you use electricity</h2>
+        <p class="card-sub">Average consumption per half-hour over the last 30 days, coloured by the average Agile price at that time of day — tall red bars are the habits worth shifting.</p>
+        <div id="profile-chart" class="chart" role="img" aria-label="Average usage by time of day chart."></div>
+        <div class="legend" id="profile-legend" aria-hidden="true"></div>
+      </section>
+
+      <details class="table-view">
+        <summary>Table — daily figures</summary>
+        <div class="table-scroll">
+          <table class="slots">
+            <thead><tr><th>Day</th><th>kWh</th><th>Agile cost</th><th id="own-cost-col">Your tariff</th></tr></thead>
+            <tbody id="daily-table-body"></tbody>
+          </table>
+        </div>
+      </details>
+    </main>
+
+    <div id="account-empty" class="empty" hidden>
+      <h2>No consumption yet</h2>
+      <p id="account-empty-detail"></p>
+    </div>
+
+    <footer>
+      <div class="mono" id="meta-line"></div>
+      <div>Smart-meter consumption reaches the API a day or two behind real time.
+        Costs shown are unit rates only unless standing charges are noted.
+        Unofficial — check your Octopus account for billing truth.</div>
+    </footer>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/6.1.0/echarts.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/timeutil.js"></script>
+  <script src="js/advisor.js"></script>
+  <script src="js/account.js"></script>
+</body>
+</html>

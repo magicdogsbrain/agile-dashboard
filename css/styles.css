@@ -90,6 +90,28 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 #postcode-input { width: 110px; }
 #refresh-btn.busy { opacity: 0.5; pointer-events: none; }
 
+a.nav-link {
+  color: var(--text-secondary); text-decoration: none;
+  border: 1px solid var(--hairline); border-radius: 8px;
+  padding: 6px 12px; background: var(--surface-1);
+}
+a.nav-link:hover { border-color: var(--baseline); color: var(--text-primary); }
+
+/* ---------- account page ---------- */
+.connect-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 12px; }
+.connect-form label {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 12px; color: var(--text-secondary);
+}
+.connect-form input { min-width: 230px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px; }
+.connect-status { font-size: 13px; color: var(--text-secondary); margin: 10px 0 0; }
+.connect-status.error { color: #d03b3b; }
+button.danger { color: #d03b3b; }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 24px; margin: 8px 0 4px; }
+.kv div { display: flex; flex-direction: column; }
+.kv dt { font-size: 12px; color: var(--text-secondary); }
+.kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+
 /* ---------- status banner ---------- */
 .banner {
   background: var(--warn-bg); color: var(--warn-ink);

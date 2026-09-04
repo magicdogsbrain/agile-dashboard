@@ -93,3 +93,15 @@ the same presets as the dashboard) and **never cuts power mid-cycle** — a
 power-monitoring smart plug plus a debounced "idle" sensor gates every
 switch-off, so the schedule opens the window but only a finished cycle closes
 it. Setup instructions are in the file's header.
+
+## Account page (`account.html`)
+
+Connect with your personal Octopus **API key + account number** (Octopus →
+account settings → API access). Both are stored **only in that browser's
+localStorage** and used for direct browser → api.octopus.energy calls — never
+sent anywhere else and never committed (the repo is public; keys must not go
+near the Action). The page discovers your real tariff, region and meters, then
+prices your actual half-hourly consumption on Agile *and* on your current
+tariff — so before switching it answers "what would Agile have cost me", and
+after switching it shows your actual costs. A "Forget key" button wipes it;
+regenerating the key on the Octopus site revokes it everywhere.

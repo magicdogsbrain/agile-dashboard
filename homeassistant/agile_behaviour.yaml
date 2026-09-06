@@ -1,0 +1,57 @@
+# Agile behaviour mode — Home Assistant package
+#
+# For the phase BEFORE smart plugs/bulbs arrive: the phone is the actuator.
+# Three notifications that make manual load-shifting easy on Agile:
+#   1. The cheapest target window of the day opens  -> "run the laundry now"
+#   2. Plunge pricing (negative rate)               -> "you're being PAID"
+#   3. Peak price                                    -> "hold off if you can"
+#
+# Entity ids here are placeholders (sed-replaced on install):
+#   sensor.octopus_energy_electricity_current_rate  -> your real current_rate
+#   binary_sensor.octopus_energy_target_dryer       -> your target rate sensor
+#   notify.notify                                    -> your phone
+# Rate values are in GBP/kWh (0.35 = 35p), matching the integration.
+
+automation:
+  - id: agile_behaviour_cheap_window
+    alias: "Agile: cheap window open — run things now"
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.octopus_energy_target_dryer
+        to: "on"
+    actions:
+      - action: notify.notify
+        data:
+          title: "⚡ Cheap electricity window open"
+          message: >-
+            The cheapest 2.5h stretch starts now
+            ({{ (states('sensor.octopus_energy_electricity_current_rate') | float(0) * 100) | round(1) }}p/kWh).
+            Good time for the washing, dryer or dishwasher.
+
+  - id: agile_behaviour_plunge
+    alias: "Agile: plunge pricing — free electricity"
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.octopus_energy_electricity_current_rate
+        below: 0
+    actions:
+      - action: notify.notify
+        data:
+          title: "🎉 You're being PAID to use electricity"
+          message: >-
+            Rate is {{ (states('sensor.octopus_energy_electricity_current_rate') | float(0) * 100) | round(1) }}p/kWh.
+            Run everything — laundry, dishwasher, immersion, charge all the things.
+
+  - id: agile_behaviour_peak
+    alias: "Agile: peak price warning"
+    triggers:
+      - trigger: numeric_state
+        entity_id: sensor.octopus_energy_electricity_current_rate
+        above: 0.35
+    actions:
+      - action: notify.notify
+        data:
+          title: "🔴 Expensive electricity right now"
+          message: >-
+            {{ (states('sensor.octopus_energy_electricity_current_rate') | float(0) * 100) | round(0) }}p/kWh.
+            Hold the big appliances if you can — it usually calms down after 7pm.

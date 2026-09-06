@@ -8,24 +8,34 @@
 #
 # Entity ids here are placeholders (sed-replaced on install):
 #   sensor.octopus_energy_electricity_current_rate  -> your real current_rate
-#   binary_sensor.octopus_energy_target_dryer       -> your target rate sensor
 #   notify.notify                                    -> your phone
 # Rate values are in GBP/kWh (0.35 = 35p), matching the integration.
+#
+# "Cheap now" is a self-contained template sensor (below 15p — the dashboard's
+# cheap band) so this works without the Target Timeframes integration; swap the
+# trigger to a proper cheapest-window sensor when that gets set up plug-day.
+
+template:
+  - binary_sensor:
+      - name: "Agile cheap now"
+        unique_id: agile_cheap_now
+        delay_on: "00:02:00"
+        state: >-
+          {{ states('sensor.octopus_energy_electricity_current_rate') | float(99) < 0.15 }}
 
 automation:
   - id: agile_behaviour_cheap_window
-    alias: "Agile: cheap window open — run things now"
+    alias: "Agile: cheap electricity — run things now"
     triggers:
       - trigger: state
-        entity_id: binary_sensor.octopus_energy_target_dryer
+        entity_id: binary_sensor.agile_cheap_now
         to: "on"
     actions:
       - action: notify.notify
         data:
-          title: "⚡ Cheap electricity window open"
+          title: "⚡ Cheap electricity right now"
           message: >-
-            The cheapest 2.5h stretch starts now
-            ({{ (states('sensor.octopus_energy_electricity_current_rate') | float(0) * 100) | round(1) }}p/kWh).
+            Rate has dropped to {{ (states('sensor.octopus_energy_electricity_current_rate') | float(0) * 100) | round(1) }}p/kWh.
             Good time for the washing, dryer or dishwasher.
 
   - id: agile_behaviour_plunge

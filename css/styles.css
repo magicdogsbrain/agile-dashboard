@@ -266,6 +266,31 @@ footer {
 }
 footer .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
 
+/* ---------- kiosk mode (?kiosk=1) ---------- */
+/* For always-on wall displays (cast to a Nest Hub, a tablet on a shelf):
+   no controls to press, no chrome, sized to fit ~1024x600 without scrolling. */
+body.kiosk .controls,
+body.kiosk footer,
+body.kiosk .table-view,
+body.kiosk #export-card,
+body.kiosk .custom-fields,
+body.kiosk #caveat { display: none !important; }
+body.kiosk .wrap { padding: 10px 16px; max-width: none; }
+body.kiosk header.top { padding: 0 0 8px; }
+body.kiosk .wordmark { font-size: 18px; }
+body.kiosk .hero { padding: 12px 16px; margin-bottom: 10px; }
+body.kiosk .now-figure .value { font-size: 40px; }
+body.kiosk .recommendation { font-size: 15px; margin-top: 10px; }
+body.kiosk .appliance-row { margin-top: 10px; gap: 6px; }
+body.kiosk .chip { padding: 3px 10px; font-size: 12px; }
+body.kiosk .ribbon-block { margin-top: 10px; }
+body.kiosk .tiles { gap: 8px; margin-bottom: 10px; }
+body.kiosk .tile { padding: 8px 12px; }
+body.kiosk .tile .value { font-size: 20px; }
+body.kiosk .card { padding: 10px 12px 4px; margin-bottom: 0; }
+body.kiosk .card .card-sub { display: none; }
+body.kiosk .chart { height: 220px; }
+
 @media (max-width: 640px) {
   .now-figure .value { font-size: 40px; }
   .chart { height: 260px; }

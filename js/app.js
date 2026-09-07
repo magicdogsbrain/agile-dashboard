@@ -16,11 +16,21 @@
     },
   };
 
+  // URL overrides, for embedding on a wall display where there's no one to
+  // click anything and no useful localStorage:
+  //   ?theme=dark|light|system   force the colour scheme
+  //   ?kiosk=1                   strip the controls and chrome, fit a small screen
+  //   ?region=H                  pin the region
+  const params = new URLSearchParams(location.search);
+  const forcedTheme = ['dark', 'light', 'system'].includes(params.get('theme')) ? params.get('theme') : null;
+  const forcedRegion = C.regions[String(params.get('region')).toUpperCase()] ? String(params.get('region')).toUpperCase() : null;
+  const kiosk = params.get('kiosk') === '1';
+
   const state = {
-    region: store.get('region', C.defaultRegion),
+    region: forcedRegion || store.get('region', C.defaultRegion),
     applianceId: store.get('appliance', 'dryer'),
     custom: store.get('custom', null), // {durationH, energyKwh}
-    theme: store.get('theme', 'system'),
+    theme: forcedTheme || store.get('theme', 'system'),
     data: null,      // {importSlots, exportSlots, source, generatedAt, products, region}
     referenceRate: null, // live Flexible (price-capped) p/kWh — the benchmark line
     evaluation: null,
@@ -437,6 +447,7 @@
 
   // ---------- boot ----------
   document.addEventListener('DOMContentLoaded', () => {
+    if (kiosk) document.body.classList.add('kiosk');
     wire();
     renderAppliances();
     renderBandLegend();

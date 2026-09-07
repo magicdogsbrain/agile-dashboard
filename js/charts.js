@@ -11,7 +11,7 @@ window.AgileCharts = (() => {
   let importChart = null;
   let exportChart = null;
   let userZoomed = false; // once the user zooms/pans, rebuilds must not reset it
-  let state = { importSlots: [], exportSlots: [], nowMs: Date.now(), best: null };
+  let state = { importSlots: [], exportSlots: [], nowMs: Date.now(), best: null, refRate: null };
 
   const available = () => typeof window.echarts !== 'undefined';
 
@@ -134,7 +134,9 @@ window.AgileCharts = (() => {
     };
   }
 
-  function nowMarks(nowMs, withBest) {
+  // isImport also gates the two import-only annotations: the best-window
+  // shading and the Flexible (price-cap) benchmark line.
+  function nowMarks(nowMs, isImport) {
     const dayLines = dayBoundaries(state.importSlots.length ? state.importSlots : state.exportSlots)
       .map((ms) => ({
         xAxis: ms,
@@ -152,7 +154,7 @@ window.AgileCharts = (() => {
           formatter: 'now', position: 'insideEndTop',
           color: cssVar('--text-secondary'), fontSize: 10, fontWeight: 600,
         },
-        data: [{ xAxis: nowMs }, ...dayLines],
+        data: [{ xAxis: nowMs }, ...dayLines, ...refLine(isImport)],
       },
       markArea: {
         silent: true, animation: false,
@@ -160,7 +162,7 @@ window.AgileCharts = (() => {
         data: [[{ xAxis: 'min' }, { xAxis: nowMs }]],
       },
     };
-    if (withBest && state.best) {
+    if (isImport && state.best) {
       marks.markArea.data.push([
         { xAxis: state.best.start, itemStyle: { color: isDark() ? 'rgba(57,135,229,0.16)' : 'rgba(42,120,214,0.10)' } },
         { xAxis: state.best.end },
@@ -169,10 +171,30 @@ window.AgileCharts = (() => {
     return marks;
   }
 
+  // Horizontal dashed benchmark: the capped Flexible rate. Slots below it are
+  // cheaper than the tariff you'd otherwise be on; slots above are dearer.
+  function refLine(isImport) {
+    if (!isImport || !state.refRate) return [];
+    return [{
+      yAxis: state.refRate,
+      lineStyle: { color: cssVar('--text-secondary'), width: 1.5, type: 'dashed', opacity: 0.9 },
+      label: {
+        formatter: `Flexible cap ${state.refRate.toFixed(1)}p`,
+        position: 'insideStartTop',
+        color: cssVar('--text-secondary'), fontSize: 10, fontWeight: 600,
+      },
+    }];
+  }
+
   function importOption() {
     const opt = baseOption();
     const data = state.importSlots.map((s) => [s.start, s.end, s.price]);
     opt.yAxis.min = (v) => Math.min(0, Math.floor(v.min));
+    // Keep the benchmark line in frame even on a day where every slot is cheap.
+    opt.yAxis.max = (v) => {
+      const dataMax = Math.ceil(v.max);
+      return state.refRate ? Math.max(dataMax, Math.ceil(state.refRate + 2)) : dataMax;
+    };
     opt.series = [
       {
         type: 'custom', name: 'Import', renderItem: makeRenderItem(),
@@ -280,8 +302,8 @@ window.AgileCharts = (() => {
 
   const resize = () => { importChart && importChart.resize(); exportChart && exportChart.resize(); };
 
-  function render(importSlots, exportSlots, nowMs, best) {
-    state = { importSlots, exportSlots, nowMs, best };
+  function render(importSlots, exportSlots, nowMs, best, refRate) {
+    state = { importSlots, exportSlots, nowMs, best, refRate: refRate ?? state.refRate };
     applyAll();
   }
 

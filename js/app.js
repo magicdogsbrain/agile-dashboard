@@ -22,6 +22,7 @@
     custom: store.get('custom', null), // {durationH, energyKwh}
     theme: store.get('theme', 'system'),
     data: null,      // {importSlots, exportSlots, source, generatedAt, products, region}
+    referenceRate: null, // live Flexible (price-capped) p/kWh — the benchmark line
     evaluation: null,
     timers: { tick: null, refetch: null },
     fetchSeq: 0, // latest-wins: stale in-flight responses are discarded
@@ -275,8 +276,9 @@
       `Region ${shown} — ${C.regions[shown] || ''}`,
       `${d.products.importProduct} / ${d.products.exportProduct}`,
       d.source === 'live' ? `live · fetched ${T.hm(d.generatedAt)}` : 'snapshot',
+      state.referenceRate ? `Flexible cap ${state.referenceRate.toFixed(2)}p` : null,
       'prices are p/kWh inc VAT (export has no VAT)',
-    ];
+    ].filter(Boolean);
     $('meta-line').textContent = bits.join(' · ');
   }
 
@@ -290,7 +292,7 @@
     if (state.data) {
       window.AgileCharts.render(
         state.data.importSlots, state.data.exportSlots, Date.now(),
-        state.evaluation && state.evaluation.best,
+        state.evaluation && state.evaluation.best, state.referenceRate,
       );
     }
     renderTable();
@@ -301,9 +303,13 @@
     const seq = ++state.fetchSeq;
     $('refresh-btn').classList.add('busy');
     try {
-      const data = await window.AgileApi.fetchRates(state.region);
+      const [data, referenceRate] = await Promise.all([
+        window.AgileApi.fetchRates(state.region),
+        window.AgileApi.fetchReferenceRate(state.region), // resolves null on failure
+      ]);
       if (seq !== state.fetchSeq) return; // superseded (e.g. region changed mid-flight)
       state.data = data;
+      state.referenceRate = referenceRate;
       $('empty-state').hidden = true;
       $('dashboard').hidden = false;
       evaluateAndRender();

@@ -8,6 +8,10 @@ window.AGILE_CONFIG = {
     // (see api.js discoverProducts) and falls back to these.
     importProduct: 'AGILE-24-10-01',
     exportProduct: 'AGILE-OUTGOING-19-05-13',
+    // Octopus Flexible — the price-capped standard variable tariff. Its live
+    // regional rate is the "what you'd otherwise be paying" benchmark drawn on
+    // the import chart, and it tracks Ofgem's quarterly cap automatically.
+    flexibleProduct: 'VAR-22-11-01',
     // Tariff code pattern: E-1R-<PRODUCT>-<REGION>
     tariffCode: (product, region) => `E-1R-${product}-${region}`,
     snapshotUrl: 'data/rates.json',
@@ -22,7 +26,7 @@ window.AGILE_CONFIG = {
     K: 'South Wales', L: 'South West England', M: 'Yorkshire',
     N: 'South Scotland', P: 'North Scotland',
   },
-  defaultRegion: 'C',
+  defaultRegion: 'H', // Southern England — this household's GSP (MPAN starts 20)
 
   // Shared price bands (p/kWh inc VAT) — the single source of truth used by BOTH
   // the charts and the advisor, so a slot's colour never contradicts its verdict.

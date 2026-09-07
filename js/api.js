@@ -123,5 +123,25 @@ window.AgileApi = (() => {
     return C.regions[letter] ? letter : null;
   }
 
-  return { fetchRates, regionForPostcode, discoverProducts, normalize };
+  /** Current Flexible (price-capped) unit rate in p/kWh inc VAT for a region —
+      the benchmark line on the import chart. Null if unavailable; the chart
+      simply omits the line rather than failing. */
+  async function fetchReferenceRate(region) {
+    try {
+      const product = C.api.flexibleProduct;
+      const tariff = C.api.tariffCode(product, region);
+      const j = await getJson(
+        `${C.api.base}/v1/products/${product}/electricity-tariffs/${tariff}/standard-unit-rates/?page_size=10`,
+        { retries: 0 },
+      );
+      const live = (j.results || []).filter((r) => !r.valid_to);
+      // Direct debit is the headline capped rate most households pay.
+      const row = live.find((r) => r.payment_method === 'DIRECT_DEBIT') || live[0];
+      return row ? row.value_inc_vat : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return { fetchRates, fetchReferenceRate, regionForPostcode, discoverProducts, normalize };
 })();

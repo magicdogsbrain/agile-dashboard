@@ -73,3 +73,13 @@ coming; reconsider only if that slips badly.
 
 - GitHub Action's first scheduled run (2026-09-03 15:05 UTC) committed
   tomorrow's prices unattended — pipeline confirmed working end to end.
+
+## Wall display (Nest Hub)
+
+The public dashboard supports URL overrides for always-on screens:
+`?kiosk=1` (strip controls/chrome, fit ~1024x600), `?theme=dark|light|system`,
+`?region=H`. Nest Hubs can't cast arbitrary websites, so HA wraps it: the
+`agile-wall` dashboard is a panel view whose only card is an iframe of
+`magicdogsbrain.github.io/agile-dashboard/?kiosk=1&theme=dark&region=H`, and an
+automation casts that to the study display each morning, on HA restart, and
+after 30 minutes idle (06:30–22:30 only).

@@ -1,0 +1,87 @@
+# Immersion vs gas — announce when heating the hot water tank with the
+# immersion heater is cheaper than firing the gas boiler.
+#
+# THE MATHS. Heating a tank needs a fixed amount of delivered heat, so the
+# tank size CANCELS OUT of the comparison:
+#     immersion cost = heat / 1.00        x electricity price
+#     gas cost       = heat / boiler_eff  x gas price
+# Immersion wins when   electricity price < gas price / boiler_eff.
+# With gas at 7.5p and an 80%-efficient boiler that's about 9.4p/kWh.
+# Tank volume only scales the £ figures we quote, not the verdict.
+#
+# ASSUMPTIONS (edit the two numbers in the "Tank heat needed" sensor and the
+# 0.80 in the break-even sensor if they're wrong for this house):
+#   cylinder 150 litres, heated 15C -> 60C (dT 45), so 7.85 kWh of heat
+#   gas boiler ~80% efficient producing domestic hot water (typical: a
+#   condensing boiler rarely condenses on a hot-water cycle)
+#   immersion ~100% efficient at the point of use
+# Standing charges are ignored: they're paid either way.
+
+template:
+  - sensor:
+      - name: "Immersion breakeven price"
+        unique_id: immersion_breakeven_price
+        unit_of_measurement: "GBP/kWh"
+        state: >-
+          {{ (states('sensor.octopus_energy_gas_e6s27007921961_7552725010_current_rate')
+              | float(0.0753) / 0.80) | round(5) }}
+
+      - name: "Tank heat needed"
+        unique_id: tank_heat_needed
+        unit_of_measurement: "kWh"
+        state: "{{ (150 * 4.186 * 45 / 3600) | round(2) }}"
+
+      - name: "Electricity next 5 hours average"
+        unique_id: elec_next_5h_avg
+        unit_of_measurement: "GBP/kWh"
+        state: >-
+          {% set cur = state_attr('event.octopus_energy_electricity_19l4174318_2000054576043_current_day_rates','rates') or [] %}
+          {% set nxt = state_attr('event.octopus_energy_electricity_19l4174318_2000054576043_next_day_rates','rates') or [] %}
+          {% set win = (cur + nxt) | selectattr('end','gt', now())
+                       | selectattr('start','lt', now() + timedelta(hours=5)) | list %}
+          {% if win | length == 0 %}unknown
+          {% else %}{{ ((win | map(attribute='value_inc_vat') | sum) / (win | length)) | round(5) }}{% endif %}
+
+  - binary_sensor:
+      - name: "Immersion beats gas"
+        unique_id: immersion_beats_gas
+        delay_on: "00:03:00"   # ignore momentary crossings
+        state: >-
+          {% set e = states('sensor.electricity_next_5_hours_average') | float(99) %}
+          {% set b = states('sensor.immersion_breakeven_price') | float(0) %}
+          {{ b > 0 and e < b }}
+
+automation:
+  - id: immersion_beats_gas_announce
+    alias: "Immersion: announce when cheaper than gas"
+    description: >-
+      Speaks when the next 5 hours of electricity average below the gas
+      break-even price, so the immersion heater is the cheaper way to heat
+      the tank. Daytime only (07:30-20:00).
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.immersion_beats_gas
+        to: "on"
+    conditions:
+      - condition: time
+        after: "07:30:00"
+        before: "20:00:00"
+    actions:
+      - action: tts.speak
+        target:
+          entity_id: tts.home_assistant_cloud
+        data:
+          media_player_entity_id:
+            - media_player.kitchen_speaker
+          message: >-
+            {% set heat = states('sensor.tank_heat_needed') | float(7.85) %}
+            {% set e = states('sensor.electricity_next_5_hours_average') | float(0) * 100 %}
+            {% set g = states('sensor.octopus_energy_gas_e6s27007921961_7552725010_current_rate') | float(0) * 100 %}
+            {% set b = states('sensor.immersion_breakeven_price') | float(0) * 100 %}
+            {% set imm = heat * e %}
+            {% set gas = (heat / 0.80) * g %}
+            Hot water tip: electricity is cheap enough that the immersion heater now beats the gas boiler.
+            The next 5 hours average {{ e | round(1) }} pence per unit, below the {{ b | round(1) }} pence break-even.
+            {% if imm < 0 %}A full tank would actually pay you about {{ -imm | round(0) }} pence, versus {{ gas | round(0) }} pence on gas.
+            {% else %}A full tank would cost about {{ imm | round(0) }} pence on the immersion, versus about {{ gas | round(0) }} pence on gas
+            — saving roughly {{ (gas - imm) | round(0) }} pence.{% endif %}

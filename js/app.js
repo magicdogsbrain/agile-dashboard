@@ -21,10 +21,14 @@
   //   ?theme=dark|light|system   force the colour scheme
   //   ?kiosk=1                   strip the controls and chrome, fit a small screen
   //   ?region=H                  pin the region
+  //   ?tiles=0                   drop the summary tiles and give the chart the room —
+  //                              for the 8" wall tablet, where the chart is the point
+  //                              and the figures are already on the Home Assistant page
   const params = new URLSearchParams(location.search);
   const forcedTheme = ['dark', 'light', 'system'].includes(params.get('theme')) ? params.get('theme') : null;
   const forcedRegion = C.regions[String(params.get('region')).toUpperCase()] ? String(params.get('region')).toUpperCase() : null;
   const kiosk = params.get('kiosk') === '1';
+  const hideTiles = params.get('tiles') === '0';
 
   const state = {
     region: forcedRegion || store.get('region', C.defaultRegion),
@@ -448,6 +452,7 @@
   // ---------- boot ----------
   document.addEventListener('DOMContentLoaded', () => {
     if (kiosk) document.body.classList.add('kiosk');
+    if (hideTiles) document.body.classList.add('no-tiles');
     wire();
     renderAppliances();
     renderBandLegend();

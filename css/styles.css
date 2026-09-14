@@ -291,6 +291,16 @@ body.kiosk .card { padding: 10px 12px 4px; margin-bottom: 0; }
 body.kiosk .card .card-sub { display: none; }
 body.kiosk .chart { height: 220px; }
 
+/* ?tiles=0 — the 8" wall tablet. The summary figures are already on the Home
+   Assistant screen beside this one, so drop them and let the chart have the
+   height instead; on a 600px-tall panel the chart is the only thing worth
+   showing and it must not need scrolling to reach. */
+body.no-tiles .tiles { display: none !important; }
+body.no-tiles.kiosk .chart { height: 300px; }
+body.no-tiles.kiosk .hero { padding: 8px 14px; margin-bottom: 6px; }
+body.no-tiles.kiosk .now-figure .value { font-size: 32px; }
+body.no-tiles.kiosk .ribbon-block { margin-top: 6px; }
+
 @media (max-width: 640px) {
   .now-figure .value { font-size: 40px; }
   .chart { height: 260px; }

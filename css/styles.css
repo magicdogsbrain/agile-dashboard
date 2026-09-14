@@ -296,10 +296,15 @@ body.kiosk .chart { height: 220px; }
    height instead; on a 600px-tall panel the chart is the only thing worth
    showing and it must not need scrolling to reach. */
 body.no-tiles .tiles { display: none !important; }
-body.no-tiles.kiosk .chart { height: 300px; }
-body.no-tiles.kiosk .hero { padding: 8px 14px; margin-bottom: 6px; }
-body.no-tiles.kiosk .now-figure .value { font-size: 32px; }
+body.no-tiles.kiosk .chart { height: 250px; }
+body.no-tiles.kiosk .hero { padding: 8px 12px; margin-bottom: 6px; }
+body.no-tiles.kiosk .now-figure .value { font-size: 28px; }
+body.no-tiles.kiosk .recommendation { font-size: 14px; margin-top: 6px; }
 body.no-tiles.kiosk .ribbon-block { margin-top: 6px; }
+body.no-tiles.kiosk .appliance-row { margin-top: 6px; }
+body.no-tiles.kiosk header.top { padding: 0 0 4px; }
+body.no-tiles.kiosk .wordmark { font-size: 15px; }
+body.no-tiles.kiosk .wrap { padding: 6px 12px; }
 
 @media (max-width: 640px) {
   .now-figure .value { font-size: 40px; }

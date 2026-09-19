@@ -1,3 +1,15 @@
+# Allowlist: this repository publishes only the Agile Board web app.
+# Everything not re-included below is ignored.
+/*
+!/index.html
+!/account.html
+!/README.md
+!/CLAUDE.md
+!/.gitignore
+!/css/
+!/js/
+!/data/
+!/scripts/
+!/.github/
 .DS_Store
-dist/
 __pycache__/

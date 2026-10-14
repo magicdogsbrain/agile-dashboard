@@ -29,6 +29,9 @@
   const forcedRegion = C.regions[String(params.get('region')).toUpperCase()] ? String(params.get('region')).toUpperCase() : null;
   const kiosk = params.get('kiosk') === '1';
   const hideTiles = params.get('tiles') === '0';
+  //   ?hero=0                    drop the price/advice hero too: chart only, for a card inside
+  //                              another dashboard that already shows the price
+  const hideHero = params.get('hero') === '0';
 
   const state = {
     region: forcedRegion || store.get('region', C.defaultRegion),
@@ -452,6 +455,7 @@
   // ---------- boot ----------
   document.addEventListener('DOMContentLoaded', () => {
     if (kiosk) document.body.classList.add('kiosk');
+    if (hideHero) document.body.classList.add('nohero');
     if (hideTiles) document.body.classList.add('no-tiles');
     wire();
     renderAppliances();

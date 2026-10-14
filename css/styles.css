@@ -275,6 +275,10 @@ body.kiosk .table-view,
 body.kiosk #export-card,
 body.kiosk .custom-fields,
 body.kiosk #caveat { display: none !important; }
+/* ?hero=0: chart only (the host page shows the price) */
+body.nohero .hero,
+body.nohero header.top { display: none !important; }
+body.nohero .wrap { padding: 4px 8px; }
 body.kiosk .wrap { padding: 10px 16px; max-width: none; }
 body.kiosk header.top { padding: 0 0 8px; }
 body.kiosk .wordmark { font-size: 18px; }
